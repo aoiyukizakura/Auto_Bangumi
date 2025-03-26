@@ -1,5 +1,6 @@
 import logging
 import re
+import os
 
 from module.conf import settings
 from module.downloader import DownloadClient
@@ -108,6 +109,39 @@ class Renamer(DownloadClient):
                             if settings.bangumi_manage.remove_bad_torrent:
                                 self.delete_torrent(_hash)
                                 break
+    def link_collection(
+            self,
+            media_list: list[str],
+            bangumi_name: str,
+            season: int,
+            method: str,
+            _hash: str,
+            **kwargs,
+    ):
+        for media_path in media_list:
+            if self.is_ep(media_path):
+                ep = self._parser.torrent_parser(
+                    torrent_path=media_path,
+                    season=season,
+                )
+                if ep:
+                    new_path = self.gen_path(ep, bangumi_name, method=method)
+                    if media_path != new_path:
+                        if new_path not in self.check_pool.keys():
+                            try:
+                                # 创建软链接而不是重命名文件
+                                os.link(media_path, new_path)
+                                logger.info(f"[Renamer] Created link: {new_path} -> {media_path}")
+                            except FileExistsError:
+                                logger.warning(f"[Renamer] Link already exists: {new_path}")
+                            except FileNotFoundError:
+                                logger.error(f"[Renamer] File not found: {media_path}")
+                            except OSError as e:
+                                logger.error(f"[Renamer] Failed to create link for {media_path}: {e}")
+                                # 删除错误种子
+                                if settings.bangumi_manage.remove_bad_torrent:
+                                    self.delete_torrent(_hash)
+                                    break
 
     def rename_subtitles(
             self,
@@ -163,10 +197,19 @@ class Renamer(DownloadClient):
             # Rename collection
             elif len(media_list) > 1:
                 logger.info("[Renamer] Start rename collection")
-                self.rename_collection(media_list=media_list, **kwargs)
+                self.link_collection(media_list=media_list, **kwargs)
                 if len(subtitle_list) > 0:
                     self.rename_subtitles(subtitle_list=subtitle_list, **kwargs)
                 self.set_category(info.hash, "BangumiCollection")
+
+                # 添加 .ignore 文件到集合文件夹
+                ignore_file_path = os.path.join(info.save_path, info.name, ".ignore")
+                try:
+                    with open(ignore_file_path, "w") as ignore_file:
+                        ignore_file.write("# This file prevents media library scanning.\n")
+                    logger.info(f"[Renamer] Created .ignore file in collection folder: {ignore_file_path}")
+                except OSError as e:
+                    logger.error(f"[Renamer] Failed to create .ignore file in {info.save_path}: {e}")
             else:
                 logger.warning(f"[Renamer] {info.name} has no media file")
         logger.debug("[Renamer] Rename process finished.")
