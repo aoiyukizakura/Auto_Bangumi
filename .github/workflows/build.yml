@@ -179,7 +179,7 @@ jobs:
           password: ${{ secrets.ACCESS_TOKEN }}
 
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dist
           path: backend/src/dist
