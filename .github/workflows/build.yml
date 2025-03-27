@@ -35,7 +35,7 @@ jobs:
             else
               echo "release=0" >> $GITHUB_OUTPUT
             fi
-          elif [[ '${{ github.event_name }}' == 'push' && (${{ github.ref }} == *'alpha'* || ${{ github.ref }} == *'beta'*) ]]; then
+          elif [[ '${{ github.event_name }}' == 'push' ]]; then
             echo "release=1" >> $GITHUB_OUTPUT
           else
             echo "release=0" >> $GITHUB_OUTPUT
@@ -145,7 +145,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            estrellaxd/auto_bangumi
+            imorpho/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.version-info.outputs.version }}
@@ -157,7 +157,7 @@ jobs:
         uses: docker/metadata-action@v4
         with:
           images: |
-            estrellaxd/auto_bangumi
+            imorpho/auto_bangumi
             ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.version-info.outputs.version }}
@@ -218,6 +218,6 @@ jobs:
           builder: ${{ steps.buildx.output.name }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
           push: false
-          tags: estrellaxd/auto_bangumi:test
+          tags: imorpho/auto_bangumi:test
           cache-from: type=gha, scope=${{ github.workflow }}
           cache-to: type=gha, scope=${{ github.workflow }}
